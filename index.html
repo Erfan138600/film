@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سینمای آنلاین - مجموعه کامل فیلم‌ها</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Tahoma', sans-serif; }
+        .movie-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .movie-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .modal { backdrop-filter: blur(5px); }
+        .loading-spinner { border-top-color: #3498db; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .star-rating { color: #fbbf24; }
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-gray-800 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <i class="fas fa-film text-red-500 text-2xl"></i>
+                    <h1 class="text-xl font-bold text-white">سینمای آنلاین</h1>
+                </div>
+                <div class="flex items-center space-x-reverse space-x-4">
+                    <button id="homeBtn" class="nav-btn bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-home ml-2"></i>خانه
+                    </button>
+                    <button id="searchBtn" class="nav-btn hover:bg-gray-700 px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-search ml-2"></i>جستجو
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Search Section -->
+    <div id="searchSection" class="hidden bg-gray-800 py-6">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex flex-col md:flex-row gap-4 mb-6">
+                    <div class="flex-1">
+                        <input type="text" id="searchInput" placeholder="نام فیلم را وارد کنید..."
+                               class="w-full px-4 py-3 bg-gray-700 text-white rounded-lg border border-gray-600 focus:border-red-500 focus:outline-none">
+                    </div>
+                    <button id="searchMovieBtn" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg transition-colors">
+                        <i class="fas fa-search ml-2"></i>جستجو
+                    </button>
+                </div>
+                
+                <!-- Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <select id="genreFilter" class="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600">
+                        <option value="">همه ژانرها</option>
+                    </select>
+                    <select id="yearFilter" class="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600">
+                        <option value="">همه سال‌ها</option>
+                    </select>
+                    <select id="ratingFilter" class="px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600">
+                        <option value="">همه امتیازها</option>
+                        <option value="9">9+ امتیاز</option>
+                        <option value="8">8+ امتیاز</option>
+                        <option value="7">7+ امتیاز</option>
+                        <option value="6">6+ امتیاز</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Home Section -->
+        <div id="homeSection">
+            <!-- Hero Section -->
+            <section class="mb-12">
+                <div class="text-center">
+                    <h2 class="text-4xl font-bold mb-4 text-red-500">مجموعه کامل فیلم‌های سینمایی</h2>
+                    <p class="text-gray-300 text-lg">هزاران فیلم از بهترین آثار سینمای جهان</p>
+                </div>
+            </section>
+
+            <!-- Categories -->
+            <div class="flex flex-wrap justify-center gap-4 mb-8">
+                <button class="category-btn bg-red-600 text-white px-6 py-2 rounded-full" data-category="popular">محبوب</button>
+                <button class="category-btn bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-full" data-category="top_rated">برترین</button>
+                <button class="category-btn bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-full" data-category="now_playing">در حال اکران</button>
+                <button class="category-btn bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-full" data-category="upcoming">به‌زودی</button>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="hidden text-center py-8">
+            <div class="loading-spinner border-4 border-gray-300 border-t-4 border-t-blue-500 rounded-full w-12 h-12 mx-auto"></div>
+            <p class="mt-4 text-gray-400">در حال بارگذاری...</p>
+        </div>
+
+        <!-- Movies Grid -->
+        <div id="moviesGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 fade-in">
+            <!-- Movies will be populated here -->
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="hidden flex justify-center items-center mt-8 space-x-reverse space-x-2">
+            <button id="prevPage" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">قبلی</button>
+            <span id="pageInfo" class="px-4 py-2 text-gray-300"></span>
+            <button id="nextPage" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">بعدی</button>
+        </div>
+    </main>
+
+    <!-- Movie Detail Modal -->
+    <div id="movieModal" class="hidden fixed inset-0 bg-black bg-opacity-75 modal z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <h2 id="modalTitle" class="text-2xl font-bold text-white"></h2>
+                    <button id="closeModal" class="text-gray-400 hover:text-white text-2xl">×</button>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <img id="modalPoster" src="" alt="" class="w-full rounded-lg shadow-lg">
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center space-x-reverse space-x-4">
+                            <div class="flex items-center star-rating">
+                                <i class="fas fa-star"></i>
+                                <span id="modalRating" class="ml-1 text-lg"></span>
+                            </div>
+                            <span id="modalYear" class="text-gray-400"></span>
+                            <span id="modalRuntime" class="text-gray-400"></span>
+                        </div>
+                        
+                        <div id="modalGenres" class="flex flex-wrap gap-2"></div>
+                        
+                        <p id="modalOverview" class="text-gray-300 leading-relaxed"></p>
+                        
+                        <div class="flex flex-wrap gap-4">
+                            <button id="watchTrailerBtn" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg transition-colors">
+                                <i class="fas fa-play ml-2"></i>مشاهده تریلر
+                            </button>
+                            <button class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-lg transition-colors">
+                                <i class="fas fa-plus ml-2"></i>افزودن به لیست
+                            </button>
+                        </div>
+                        
+                        <div id="movieDetails" class="space-y-2 text-sm text-gray-400"></div>
+                    </div>
+                </div>
+                
+                <!-- Trailer Video -->
+                <div id="trailerContainer" class="hidden mt-6">
+                    <h3 class="text-xl font-bold mb-4">تریلر فیلم</h3>
+                    <div class="aspect-w-16 aspect-h-9">
+                        <iframe id="trailerFrame" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        class MovieApp {
+            constructor() {
+                this.apiKey = '4e44d9029b1270a757cddc766a1bcb63'; // Demo API key
+                this.baseUrl = 'https://api.themoviedb.org/3';
+                this.imageBaseUrl = 'https://image.tmdb.org/t/p/w500';
+                this.currentPage = 1;
+                this.currentCategory = 'popular';
+                this.isSearchMode = false;
+                this.genres = {};
+                
+                this.init();
+            }
+            
+            async init() {
+                this.bindEvents();
+                await this.loadGenres();
+                this.populateFilters();
+                await this.loadMovies();
+            }
+            
+            bindEvents() {
+                // Navigation
+                document.getElementById('homeBtn').addEventListener('click', () => this.showHome());
+                document.getElementById('searchBtn').addEventListener('click', () => this.showSearch());
+                
+                // Search
+                document.getElementById('searchMovieBtn').addEventListener('click', () => this.searchMovies());
+                document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.searchMovies();
+                });
+                
+                // Categories
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.changeCategory(btn.dataset.category));
+                });
+                
+                // Pagination
+                document.getElementById('prevPage').addEventListener('click', () => this.prevPage());
+                document.getElementById('nextPage').addEventListener('click', () => this.nextPage());
+                
+                // Modal
+                document.getElementById('closeModal').addEventListener('click', () => this.closeModal());
+                document.getElementById('movieModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'movieModal') this.closeModal();
+                });
+                document.getElementById('watchTrailerBtn').addEventListener('click', () => this.toggleTrailer());
+                
+                // Filters
+                ['genreFilter', 'yearFilter', 'ratingFilter'].forEach(id => {
+                    document.getElementById(id).addEventListener('change', () => this.applyFilters());
+                });
+            }
+            
+            showHome() {
+                document.getElementById('homeSection').classList.remove('hidden');
+                document.getElementById('searchSection').classList.add('hidden');
+                this.isSearchMode = false;
+                this.currentPage = 1;
+                this.loadMovies();
+            }
+            
+            showSearch() {
+                document.getElementById('homeSection').classList.add('hidden');
+                document.getElementById('searchSection').classList.remove('hidden');
+                this.isSearchMode = true;
+                this.clearMovies();
+            }
+            
+            async loadGenres() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/genre/movie/list?api_key=${this.apiKey}&language=en-US`);
+                    const data = await response.json();
+                    data.genres.forEach(genre => {
+                        this.genres[genre.id] = genre.name;
+                    });
+                } catch (error) {
+                    console.error('Error loading genres:', error);
+                }
+            }
+            
+            populateFilters() {
+                const genreSelect = document.getElementById('genreFilter');
+                Object.entries(this.genres).forEach(([id, name]) => {
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = name;
+                    genreSelect.appendChild(option);
+                });
+                
+                const yearSelect = document.getElementById('yearFilter');
+                const currentYear = new Date().getFullYear();
+                for (let year = currentYear; year >= 1950; year--) {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearSelect.appendChild(option);
+                }
+            }
+            
+            async loadMovies(category = null) {
+                this.showLoading();
+                
+                try {
+                    const cat = category || this.currentCategory;
+                    const url = `${this.baseUrl}/movie/${cat}?api_key=${this.apiKey}&language=en-US&page=${this.currentPage}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    this.displayMovies(data.results);
+                    this.updatePagination(data.page, data.total_pages);
+                } catch (error) {
+                    console.error('Error loading movies:', error);
+                    this.showError('خطا در بارگذاری فیلم‌ها');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+            
+            async searchMovies() {
+                const query = document.getElementById('searchInput').value.trim();
+                if (!query) return;
+                
+                this.showLoading();
+                
+                try {
+                    const url = `${this.baseUrl}/search/movie?api_key=${this.apiKey}&language=en-US&query=${encodeURIComponent(query)}&page=${this.currentPage}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    this.displayMovies(data.results);
+                    this.updatePagination(data.page, data.total_pages);
+                } catch (error) {
+                    console.error('Error searching movies:', error);
+                    this.showError('خطا در جستجوی فیلم‌ها');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+            
+            changeCategory(category) {
+                this.currentCategory = category;
+                this.currentPage = 1;
+                
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.classList.remove('bg-red-600');
+                    btn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                });
+                
+                document.querySelector(`[data-category="${category}"]`).classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                document.querySelector(`[data-category="${category}"]`).classList.add('bg-red-600');
+                
+                this.loadMovies();
+            }
+            
+            displayMovies(movies) {
+                const grid = document.getElementById('moviesGrid');
+                grid.innerHTML = '';
+                
+                if (!movies || movies.length === 0) {
+                    grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400">هیچ فیلمی یافت نشد</div>';
+                    return;
+                }
+                
+                movies.forEach(movie => {
+                    const movieCard = this.createMovieCard(movie);
+                    grid.appendChild(movieCard);
+                });
+                
+                grid.classList.add('fade-in');
+            }
+            
+            createMovieCard(movie) {
+                const card = document.createElement('div');
+                card.className = 'movie-card bg-gray-800 rounded-lg overflow-hidden shadow-lg cursor-pointer';
+                card.onclick = () => this.showMovieDetails(movie.id);
+                
+                const posterUrl = movie.poster_path 
+                    ? `${this.imageBaseUrl}${movie.poster_path}`
+                    : 'https://via.placeholder.com/500x750/1f2937/ffffff?text=No+Image';
+                
+                card.innerHTML = `
+                    <div class="relative">
+                        <img src="${posterUrl}" alt="${movie.title}" class="w-full h-80 object-cover">
+                        <div class="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs">
+                            <i class="fas fa-star"></i> ${movie.vote_average.toFixed(1)}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold text-lg mb-2 truncate" title="${movie.title}">${movie.title}</h3>
+                        <p class="text-gray-400 text-sm">${new Date(movie.release_date).getFullYear() || 'نامشخص'}</p>
+                    </div>
+                `;
+                
+                return card;
+            }
+            
+            async showMovieDetails(movieId) {
+                this.showLoading();
+                
+                try {
+                    // Get movie details
+                    const movieResponse = await fetch(`${this.baseUrl}/movie/${movieId}?api_key=${this.apiKey}&language=en-US`);
+                    const movie = await movieResponse.json();
+                    
+                    // Get movie videos (trailers)
+                    const videosResponse = await fetch(`${this.baseUrl}/movie/${movieId}/videos?api_key=${this.apiKey}&language=en-US`);
+                    const videos = await videosResponse.json();
+                    
+                    this.populateModal(movie, videos.results);
+                    document.getElementById('movieModal').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error loading movie details:', error);
+                    this.showError('خطا در بارگذاری جزئیات فیلم');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+            
+            populateModal(movie, videos) {
+                const posterUrl = movie.poster_path 
+                    ? `${this.imageBaseUrl}${movie.poster_path}`
+                    : 'https://via.placeholder.com/500x750/1f2937/ffffff?text=No+Image';
+                
+                document.getElementById('modalTitle').textContent = movie.title;
+                document.getElementById('modalPoster').src = posterUrl;
+                document.getElementById('modalRating').textContent = movie.vote_average.toFixed(1);
+                document.getElementById('modalYear').textContent = new Date(movie.release_date).getFullYear();
+                document.getElementById('modalRuntime').textContent = movie.runtime ? `${movie.runtime} دقیقه` : '';
+                document.getElementById('modalOverview').textContent = movie.overview || 'توضیحاتی موجود نیست';
+                
+                // Genres
+                const genresContainer = document.getElementById('modalGenres');
+                genresContainer.innerHTML = '';
+                movie.genres.forEach(genre => {
+                    const span = document.createElement('span');
+                    span.className = 'bg-gray-700 px-3 py-1 rounded-full text-sm';
+                    span.textContent = genre.name;
+                    genresContainer.appendChild(span);
+                });
+                
+                // Details
+                const detailsContainer = document.getElementById('movieDetails');
+                detailsContainer.innerHTML = `
+                    <div><strong>بودجه:</strong> ${movie.budget ? '$' + movie.budget.toLocaleString() : 'نامشخص'}</div>
+                    <div><strong>فروش:</strong> ${movie.revenue ? '$' + movie.revenue.toLocaleString() : 'نامشخص'}</div>
+                    <div><strong>زبان اصلی:</strong> ${movie.original_language.toUpperCase()}</div>
+                    <div><strong>کشور سازنده:</strong> ${movie.production_countries.map(c => c.name).join(', ') || 'نامشخص'}</div>
+                `;
+                
+                // Store trailer info
+                const trailer = videos.find(video => video.type === 'Trailer' && video.site === 'YouTube');
+                if (trailer) {
+                    document.getElementById('watchTrailerBtn').dataset.videoKey = trailer.key;
+                    document.getElementById('watchTrailerBtn').style.display = 'block';
+                } else {
+                    document.getElementById('watchTrailerBtn').style.display = 'none';
+                }
+                
+                // Hide trailer initially
+                document.getElementById('trailerContainer').classList.add('hidden');
+            }
+            
+            toggleTrailer() {
+                const container = document.getElementById('trailerContainer');
+                const frame = document.getElementById('trailerFrame');
+                const btn = document.getElementById('watchTrailerBtn');
+                
+                if (container.classList.contains('hidden')) {
+                    const videoKey = btn.dataset.videoKey;
+                    frame.src = `https://www.youtube.com/embed/${videoKey}`;
+                    container.classList.remove('hidden');
+                    btn.innerHTML = '<i class="fas fa-pause ml-2"></i>بستن تریلر';
+                } else {
+                    frame.src = '';
+                    container.classList.add('hidden');
+                    btn.innerHTML = '<i class="fas fa-play ml-2"></i>مشاهده تریلر';
+                }
+            }
+            
+            closeModal() {
+                document.getElementById('movieModal').classList.add('hidden');
+                document.getElementById('trailerFrame').src = '';
+                document.getElementById('trailerContainer').classList.add('hidden');
+            }
+            
+            applyFilters() {
+                // This would implement filtering logic
+                // For now, just reload movies
+                this.currentPage = 1;
+                if (this.isSearchMode) {
+                    this.searchMovies();
+                } else {
+                    this.loadMovies();
+                }
+            }
+            
+            updatePagination(currentPage, totalPages) {
+                const pagination = document.getElementById('pagination');
+                const pageInfo = document.getElementById('pageInfo');
+                const prevBtn = document.getElementById('prevPage');
+                const nextBtn = document.getElementById('nextPage');
+                
+                if (totalPages > 1) {
+                    pagination.classList.remove('hidden');
+                    pageInfo.textContent = `صفحه ${currentPage} از ${totalPages}`;
+                    prevBtn.disabled = currentPage === 1;
+                    nextBtn.disabled = currentPage === totalPages;
+                } else {
+                    pagination.classList.add('hidden');
+                }
+            }
+            
+            prevPage() {
+                if (this.currentPage > 1) {
+                    this.currentPage--;
+                    if (this.isSearchMode) {
+                        this.searchMovies();
+                    } else {
+                        this.loadMovies();
+                    }
+                }
+            }
+            
+            nextPage() {
+                this.currentPage++;
+                if (this.isSearchMode) {
+                    this.searchMovies();
+                } else {
+                    this.loadMovies();
+                }
+            }
+            
+            showLoading() {
+                document.getElementById('loadingSpinner').classList.remove('hidden');
+            }
+            
+            hideLoading() {
+                document.getElementById('loadingSpinner').classList.add('hidden');
+            }
+            
+            clearMovies() {
+                document.getElementById('moviesGrid').innerHTML = '';
+                document.getElementById('pagination').classList.add('hidden');
+            }
+            
+            showError(message) {
+                const grid = document.getElementById('moviesGrid');
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-8 text-red-500">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p class="text-lg">${message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', () => {
+            new MovieApp();
+        });
+    </script>
+</body>
+</html>
